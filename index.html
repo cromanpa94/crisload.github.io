@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work status dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .gauges-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .gauge-wrapper {
+            flex: 1;
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .gauge {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+        }
+
+        .gauge-circle {
+            transform: rotate(-90deg);
+        }
+
+        .gauge-background {
+            fill: none;
+            stroke: #e0e0e0;
+            stroke-width: 20;
+        }
+
+        .gauge-progress {
+            fill: none;
+            stroke-width: 20;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+
+        .gauge-progress.busy {
+            stroke: url(#busyGradient);
+        }
+
+        .gauge-progress.mood {
+            stroke: url(#moodGradient);
+        }
+
+        .gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .gauge-label {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .gauge-description {
+            font-size: 0.95em;
+            color: #777;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        .status-indicator {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        .efficiency-score {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .efficiency-label {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .last-updated {
+            font-size: 0.9em;
+            color: #888;
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .error {
+            text-align: center;
+            color: #d32f2f;
+            padding: 20px;
+            background: #ffebee;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .loading-animation {
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .gauge {
+                width: 180px;
+                height: 180px;
+            }
+
+            .efficiency-score {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Work status dashboard</h1>
+        <p class="subtitle">Availability and efficiency metrics</p>
+        
+        <div id="content" class="loading loading-animation">
+            <p>Loading status data...</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CSV_URL = 'status.csv';
+        const CACHE_DURATION = 60000; // 1 minute cache for development
+
+        // SVG gauge parameters
+        const RADIUS = 80;
+        const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+        function createGaugeHTML(busyValue, moodValue, lastUpdate) {
+            // Calculate efficiency score (inverse of busy + mood)
+            const efficiency = Math.round((100 - busyValue + moodValue) / 2);
+            
+            // Determine status descriptions
+            const busyStatus = getBusyStatus(busyValue);
+            const moodStatus = getMoodStatus(moodValue);
+            const efficiencyStatus = getEfficiencyStatus(efficiency);
+
+            return `
+                <div class="gauges-container">
+                    <div class="gauge-wrapper">
+                        <div class="gauge-label">🏃‍♂️ Workload</div>
+                        <div class="gauge">
+                            <svg class="gauge-circle" width="200" height="200" viewBox="0 0 200 200">
+                                <defs>
+                                    <linearGradient id="busyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+                                        <stop offset="50%" style="stop-color:#FFC107;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#f44336;stop-opacity:1" />
+                                    </linearGradient>
+                                </defs>
+                                <circle class="gauge-background" cx="100" cy="100" r="${RADIUS}"></circle>
+                                <circle class="gauge-progress busy" cx="100" cy="100" r="${RADIUS}"
+                                    stroke-dasharray="${CIRCUMFERENCE}"
+                                    stroke-dashoffset="${CIRCUMFERENCE - (busyValue / 100) * CIRCUMFERENCE}">
+                                </circle>
+                            </svg>
+                            <div class="gauge-text">${busyValue}</div>
+                        </div>
+                        <div class="gauge-description">${busyStatus}</div>
+                    </div>
+
+                    <div class="gauge-wrapper">
+                        <div class="gauge-label">😊 Mood</div>
+                        <div class="gauge">
+                            <svg class="gauge-circle" width="200" height="200" viewBox="0 0 200 200">
+                                <defs>
+                                    <linearGradient id="moodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#9C27B0;stop-opacity:1" />
+                                        <stop offset="50%" style="stop-color:#2196F3;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#00BCD4;stop-opacity:1" />
+                                    </linearGradient>
+                                </defs>
+                                <circle class="gauge-background" cx="100" cy="100" r="${RADIUS}"></circle>
+                                <circle class="gauge-progress mood" cx="100" cy="100" r="${RADIUS}"
+                                    stroke-dasharray="${CIRCUMFERENCE}"
+                                    stroke-dashoffset="${CIRCUMFERENCE - (moodValue / 100) * CIRCUMFERENCE}">
+                                </circle>
+                            </svg>
+                            <div class="gauge-text">${moodValue}</div>
+                        </div>
+                        <div class="gauge-description">${moodStatus}</div>
+                    </div>
+                </div>
+
+                <div class="status-indicator">
+                    <div class="efficiency-score">${efficiency}%</div>
+                    <div class="efficiency-label">Overall Efficiency</div>
+                    <div style="color: #666; font-size: 1em;">${efficiencyStatus}</div>
+                </div>
+
+                <div class="last-updated">
+                    🕒 Last updated: ${lastUpdate}
+                </div>
+            `;
+        }
+
+        function getBusyStatus(value) {
+            if (value >= 80) return "Extremely busy - Critical deadlines";
+            if (value >= 60) return "Very busy - Limited availability";
+            if (value >= 40) return "Moderately busy - Some availability";
+            if (value >= 20) return "Light workload - Good availability";
+            return "Very available - Open for collaboration";
+        }
+
+        function getMoodStatus(value) {
+            if (value >= 80) return "Excellent mood - Highly energetic";
+            if (value >= 60) return "Good mood - Productive state";
+            if (value >= 40) return "Neutral mood - Steady pace";
+            if (value >= 20) return "Low energy - Need focus time";
+            return "Very low energy - Minimal capacity";
+        }
+
+        function getEfficiencyStatus(value) {
+            if (value >= 80) return "Highest performance";
+            if (value >= 60) return "High efficiency";
+            if (value >= 40) return "Moderate efficiency - Standard response time";
+            if (value >= 20) return "Low efficiency - Delayed responses";
+            return "Minimal efficiency - Emergency only";
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffHours < 1) {
+                const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+            } else if (diffHours < 24) {
+                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            } else if (diffDays < 7) {
+                return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+            } else {
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        }
+
+        async function loadStatusData() {
+            const contentDiv = document.getElementById('content');
+            
+            try {
+                
+                const response = await fetch(`${CSV_URL}?t=${Date.now()}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch status data');
+                }
+
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+                
+                if (lines.length < 2) {
+                    throw new Error('Invalid CSV format');
+                }
+
+                
+                const dataLine = lines[lines.length - 1]; 
+                const values = dataLine.split(',').map(v => v.trim());
+                
+                if (values.length < 2) {
+                    throw new Error('Invalid data format');
+                }
+
+                const busyValue = parseInt(values[0]) || 50;
+                const moodValue = parseInt(values[1]) || 50;
+                
+                
+                const lastModified = response.headers.get('last-modified') || new Date().toISOString();
+                const formattedDate = formatDate(lastModified);
+
+                contentDiv.innerHTML = createGaugeHTML(busyValue, moodValue, formattedDate);
+
+            } catch (error) {
+                console.error('Error loading status data:', error);
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <p><strong>Unable to load status data</strong></p>
+                        <p style="margin-top: 10px; font-size: 0.9em;">${error.message}</p>
+                        <p style="margin-top: 10px; font-size: 0.85em;">Please check back later or contact the administrator.</p>
+                    </div>
+                `;
+            }
+        }
+
+        
+        loadStatusData();
+
+        
+        setInterval(loadStatusData, CACHE_DURATION);
+
+        
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                loadStatusData();
+            }
+        });
+    </script>
+</body>
+</html>
