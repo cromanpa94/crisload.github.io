@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work status dashboard</title>
+    <title>Cristian's work status dashboard</title>
     <style>
         * {
             margin: 0;
@@ -39,11 +39,16 @@
             font-weight: 600;
         }
 
-        .subtitle {
+        .note {
             text-align: center;
-            color: #666;
+            color: #555;
             margin-bottom: 40px;
-            font-size: 1.1em;
+            font-size: 1.2em;
+            font-style: italic;
+            padding: 15px;
+            background: rgba(103, 126, 234, 0.08);
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
         }
 
         .gauges-container {
@@ -192,13 +197,17 @@
             .efficiency-score {
                 font-size: 2em;
             }
+
+            .note {
+                font-size: 1em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📊 Work status dashboard</h1>
-        <p class="subtitle">Availability and efficiency metrics</p>
+        <div id="status-note" class="note">Loading status...</div>
         
         <div id="content" class="loading loading-animation">
             <p>Loading status data...</p>
@@ -207,12 +216,29 @@
 
     <script>
         // Configuration
-        const CSV_URL = 'status.csv';
+        const STATUS_URL = 'status.md';
         const CACHE_DURATION = 60000; // 1 minute cache for development
 
         // SVG gauge parameters
         const RADIUS = 80;
         const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+        function parseMarkdownStatus(mdContent) {
+            // Parse the markdown format: busy=XX, mood=XX, note="..."
+            const busyMatch = mdContent.match(/busy\s*=\s*(\d+)/i);
+            const moodMatch = mdContent.match(/mood\s*=\s*(\d+)/i);
+            const noteMatch = mdContent.match(/note\s*=\s*"([^"]+)"/i) || mdContent.match(/note\s*=\s*'([^']+)'/i);
+            
+            const busy = busyMatch ? parseInt(busyMatch[1]) : 50;
+            const mood = moodMatch ? parseInt(moodMatch[1]) : 50;
+            const note = noteMatch ? noteMatch[1] : "Real-time availability and efficiency metrics";
+            
+            return {
+                busy: Math.max(1, Math.min(100, busy)),
+                mood: Math.max(1, Math.min(100, mood)),
+                note: note
+            };
+        }
 
         function createGaugeHTML(busyValue, moodValue, lastUpdate) {
             // Calculate efficiency score (inverse of busy + mood)
@@ -226,7 +252,7 @@
             return `
                 <div class="gauges-container">
                     <div class="gauge-wrapper">
-                        <div class="gauge-label">🏃‍♂️ Workload</div>
+                        <div class="gauge-label">Workload</div>
                         <div class="gauge">
                             <svg class="gauge-circle" width="200" height="200" viewBox="0 0 200 200">
                                 <defs>
@@ -248,7 +274,7 @@
                     </div>
 
                     <div class="gauge-wrapper">
-                        <div class="gauge-label">😊 Mood</div>
+                        <div class="gauge-label">Mood</div>
                         <div class="gauge">
                             <svg class="gauge-circle" width="200" height="200" viewBox="0 0 200 200">
                                 <defs>
@@ -277,7 +303,7 @@
                 </div>
 
                 <div class="last-updated">
-                    🕒 Last updated: ${lastUpdate}
+                    Last updated: ${lastUpdate}
                 </div>
             `;
         }
@@ -299,11 +325,11 @@
         }
 
         function getEfficiencyStatus(value) {
-            if (value >= 80) return "Highest performance";
+            if (value >= 80) return "Very high performance";
             if (value >= 60) return "High efficiency";
-            if (value >= 40) return "Moderate efficiency - Standard response time";
-            if (value >= 20) return "Low efficiency - Delayed responses";
-            return "Minimal efficiency - Emergency only";
+            if (value >= 40) return "Moderate efficiency";
+            if (value >= 20) return "Low efficiency";
+            return "🛑 Minimal efficiency - Emergency only";
         }
 
         function formatDate(dateString) {
@@ -333,41 +359,36 @@
 
         async function loadStatusData() {
             const contentDiv = document.getElementById('content');
+            const noteDiv = document.getElementById('status-note');
             
             try {
-                
-                const response = await fetch(`${CSV_URL}?t=${Date.now()}`);
+                // Add cache buster to ensure fresh data
+                const response = await fetch(`${STATUS_URL}?t=${Date.now()}`);
                 
                 if (!response.ok) {
                     throw new Error('Failed to fetch status data');
                 }
 
-                const csvText = await response.text();
-                const lines = csvText.trim().split('\n');
+                const mdText = await response.text();
                 
-                if (lines.length < 2) {
-                    throw new Error('Invalid CSV format');
-                }
-
+                // Parse the markdown content
+                const statusData = parseMarkdownStatus(mdText);
                 
-                const dataLine = lines[lines.length - 1]; 
-                const values = dataLine.split(',').map(v => v.trim());
+                // Update the note
+                noteDiv.textContent = statusData.note;
+                noteDiv.style.animation = 'none';
                 
-                if (values.length < 2) {
-                    throw new Error('Invalid data format');
-                }
-
-                const busyValue = parseInt(values[0]) || 50;
-                const moodValue = parseInt(values[1]) || 50;
-                
-                
+                // Get file last modified time from response headers or use current time
                 const lastModified = response.headers.get('last-modified') || new Date().toISOString();
                 const formattedDate = formatDate(lastModified);
 
-                contentDiv.innerHTML = createGaugeHTML(busyValue, moodValue, formattedDate);
+                contentDiv.innerHTML = createGaugeHTML(statusData.busy, statusData.mood, formattedDate);
+                contentDiv.classList.remove('loading', 'loading-animation');
 
             } catch (error) {
                 console.error('Error loading status data:', error);
+                noteDiv.textContent = "Unable to load status";
+                noteDiv.style.animation = 'none';
                 contentDiv.innerHTML = `
                     <div class="error">
                         <p><strong>Unable to load status data</strong></p>
@@ -378,13 +399,13 @@
             }
         }
 
-        
+        // Load data on page load
         loadStatusData();
 
-        
+        // Refresh data every minute (can be adjusted)
         setInterval(loadStatusData, CACHE_DURATION);
 
-        
+        // Refresh on visibility change
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 loadStatusData();
