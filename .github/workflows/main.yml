@@ -1,0 +1,116 @@
+name: Update Status from Nextcloud
+
+on:
+  schedule:
+    # Run every day at 8 AM UTC (adjust as needed)
+    - cron: '0 10 * * 1-5'
+  workflow_dispatch: # Allow manual trigger
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'status.md'  # Avoid infinite loop when we commit status.md
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Download status file from Nextcloud
+      run: |
+        # Download the status.md file from Nextcloud WebDAV
+        # Using curl with the public WebDAV endpoint
+        curl -f -o status_new.md \
+          "https://nextcloud.datadiversitylab.synology.me/public.php/dav/files/NFFLArX36qtzfLp/" \
+          || echo "Failed to download file"
+        
+        # Check if download was successful
+        if [ ! -f status_new.md ]; then
+          echo "Download failed - keeping existing status.md"
+          exit 1
+        fi
+    
+    - name: Check for changes
+      id: check_changes
+      run: |
+        # Compare the downloaded file with the existing one
+        if [ -f status.md ]; then
+          if cmp -s status_new.md status.md; then
+            echo "No changes detected in status.md"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in status.md"
+            echo "changed=true" >> $GITHUB_OUTPUT
+            # Show what changed for logging purposes
+            echo "=== Changes detected ==="
+            diff status.md status_new.md || true
+            echo "======================="
+          fi
+        else
+          echo "status.md does not exist, creating it"
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Update status.md if changed
+      if: steps.check_changes.outputs.changed == 'true'
+      run: |
+        # Replace the old file with the new one
+        mv status_new.md status.md
+        
+        # Validate the file format
+        if grep -q "busy=" status.md && grep -q "mood=" status.md; then
+          echo "Status file format validated"
+        else
+          echo "Warning: Status file may not have the expected format"
+        fi
+        
+        # Display the content for logging
+        echo "=== Updated status.md content ==="
+        cat status.md
+        echo "================================"
+    
+    - name: Commit and push if changed
+      if: steps.check_changes.outputs.changed == 'true'
+      run: |
+        git config --global user.name 'GitHub Action'
+        git config --global user.email 'action@github.com'
+        git add status.md
+        git commit -m "Update status data - $(date +'%Y-%m-%d %H:%M:%S UTC')"
+        git push
+    
+    - name: Clean up
+      if: always()
+      run: |
+        rm -f status_new.md
+
+    - name: Update history if changed
+      if: steps.check_changes.outputs.changed == 'true'
+      run: |
+        # Parse current values from status.md
+        BUSY=$(grep -o 'busy[[:space:]]*=[[:space:]]*[0-9]*' status.md | grep -o '[0-9]*')
+        MOOD=$(grep -o 'mood[[:space:]]*=[[:space:]]*[0-9]*' status.md | grep -o '[0-9]*')
+        
+        # Calculate efficiency
+        if [ "$BUSY" = "0" ] && [ "$MOOD" = "0" ]; then
+          EFFICIENCY=0
+        else
+          EFFICIENCY=$(( (100 - BUSY + MOOD) / 2 ))
+        fi
+        
+        # Create history.csv if it doesn't exist
+        if [ ! -f history.csv ]; then
+          echo "timestamp,busy,mood,efficiency" > history.csv
+        fi
+        
+        # Append new data
+        echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ'),$BUSY,$MOOD,$EFFICIENCY" >> history.csv
+        
+        # Keep only last 365 days of data (optional)
+        tail -n 366 history.csv > history_temp.csv && mv history_temp.csv history.csv
+        
+        git add history.csv
