@@ -87,3 +87,32 @@ jobs:
       if: always()
       run: |
         rm -f status_new.md
+
+    - name: Update history if changed
+      if: steps.check_changes.outputs.changed == 'true'
+      run: |
+        # Parse current values from status.md
+        BUSY=$(grep -o 'busy[[:space:]]*=[[:space:]]*[0-9]*' status.md | grep -o '[0-9]*')
+        MOOD=$(grep -o 'mood[[:space:]]*=[[:space:]]*[0-9]*' status.md | grep -o '[0-9]*')
+        
+        # Calculate efficiency
+        if [ "$BUSY" = "0" ] && [ "$MOOD" = "0" ]; then
+          EFFICIENCY=0
+        else
+          EFFICIENCY=$(( (100 - BUSY + MOOD) / 2 ))
+        fi
+        
+        # Create history.csv if it doesn't exist
+        if [ ! -f history.csv ]; then
+          echo "timestamp,busy,mood,efficiency" > history.csv
+        fi
+        
+        # Append new data
+        echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ'),$BUSY,$MOOD,$EFFICIENCY" >> history.csv
+        
+        # Keep only last 365 days of data (optional)
+        tail -n 366 history.csv > history_temp.csv && mv history_temp.csv history.csv
+        
+        git add history.csv
+
+
