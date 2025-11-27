@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cristian's Work Status Dashboard</title>
+    <title>Cristian's work efficiency status</title>
     <style>
         * {
             margin: 0;
@@ -39,10 +39,19 @@
             font-weight: 600;
         }
 
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            margin-top: 5px;
+            font-size: 1.1em;
+            font-weight: 400;
+        }
+
         .note {
             text-align: center;
             color: #555;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             font-size: 1.2em;
             font-style: italic;
             padding: 15px;
@@ -206,7 +215,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>Cristian's Work Status Dashboard</h1>
+        <h1>Cristian's work efficiency status</h1>
+        <p class="subtitle">This dashboard shows my expected performance for any given day, based on the average between my availability and mood. Using this dashboard, you can check my current workload and response time expectations.</p>
         <div id="status-note" class="note">Loading status...</div>
         
         <div id="content" class="loading loading-animation">
@@ -257,7 +267,7 @@
             return `
                 <div class="gauges-container">
                     <div class="gauge-wrapper">
-                        <div class="gauge-label">🏃🏿 Workload</div>
+                        <div class="gauge-label">Perceived workload</div>
                         <div class="gauge">
                             <svg class="gauge-circle" width="200" height="200" viewBox="0 0 200 200">
                                 <defs>
@@ -279,7 +289,7 @@
                     </div>
 
                     <div class="gauge-wrapper">
-                        <div class="gauge-label">😊 Mood</div>
+                        <div class="gauge-label">Current mood</div>
                         <div class="gauge">
                             <svg class="gauge-circle" width="200" height="200" viewBox="0 0 200 200">
                                 <defs>
