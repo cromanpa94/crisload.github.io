@@ -241,8 +241,13 @@
         }
 
         function createGaugeHTML(busyValue, moodValue, lastUpdate) {
-            // Calculate efficiency score (inverse of busy + mood)
-            const efficiency = Math.round((100 - busyValue + moodValue) / 2);
+            // Calculate efficiency score - if both are 0 (not working), efficiency is 0
+            let efficiency;
+            if (busyValue === 0 && moodValue === 0) {
+                efficiency = 0;
+            } else {
+                efficiency = Math.round((100 - busyValue + moodValue) / 2);
+            }
             
             // Determine status descriptions
             const busyStatus = getBusyStatus(busyValue);
