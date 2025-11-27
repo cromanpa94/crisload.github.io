@@ -234,8 +234,8 @@
             const note = noteMatch ? noteMatch[1] : "Real-time availability and efficiency metrics";
             
             return {
-                busy: Math.max(1, Math.min(100, busy)),
-                mood: Math.max(1, Math.min(100, mood)),
+                busy: Math.max(0, Math.min(100, busy)),  // Allow 0 as minimum
+                mood: Math.max(0, Math.min(100, mood)),  // Allow 0 as minimum
                 note: note
             };
         }
@@ -332,12 +332,13 @@
         }
 
         function getEfficiencyStatus(value) {
-            if (value <= 5) return "🔴 Not working - Off duty";
+            if (value === 0) return "🔴 Not working - Off duty";
             if (value >= 80) return "🚀 Peak performance - Ideal for complex tasks";
             if (value >= 60) return "✨ High efficiency - Great for collaboration";
             if (value >= 40) return "⚡ Moderate efficiency - Standard response time";
             if (value >= 20) return "🔋 Low efficiency - Delayed responses expected";
-            return "🛑 Minimal efficiency - Emergency only";
+            if (value >= 6) return "🛑 Minimal efficiency - Emergency only";
+            return "🔴 Nearly off duty";
         }
 
         function formatDate(dateString) {
