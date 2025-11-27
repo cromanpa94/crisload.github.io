@@ -206,7 +206,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 Cristian's Work Status Dashboard</h1>
+        <h1>Cristian's Work Status Dashboard</h1>
         <div id="status-note" class="note">Loading status...</div>
         
         <div id="content" class="loading loading-animation">
@@ -216,8 +216,8 @@
 
     <script>
         // Configuration
-        const STATUS_URL = 'status.md'; // Markdown file in the same repository
-        const CACHE_DURATION = 60000; // 1 minute cache for development, can be increased
+        const STATUS_URL = 'status.md';
+        const CACHE_DURATION = 60000; // 1 minute cache for development
 
         // SVG gauge parameters
         const RADIUS = 80;
@@ -257,7 +257,7 @@
             return `
                 <div class="gauges-container">
                     <div class="gauge-wrapper">
-                        <div class="gauge-label">🏃‍♂️ Workload</div>
+                        <div class="gauge-label">🏃🏿 Workload</div>
                         <div class="gauge">
                             <svg class="gauge-circle" width="200" height="200" viewBox="0 0 200 200">
                                 <defs>
@@ -314,31 +314,31 @@
         }
 
         function getBusyStatus(value) {
-            if (value === 0) return "Not working - Off duty";
-            if (value >= 80) return "Extremely busy - Critical deadlines";
-            if (value >= 60) return "Very busy - Limited availability";
-            if (value >= 40) return "Moderately busy - Some availability";
-            if (value >= 20) return "Light workload - Good availability";
-            return "Very available - Open for collaboration";
+            if (value === 0) return "Not working";
+            if (value >= 80) return "Extremely busy";
+            if (value >= 60) return "Very busy";
+            if (value >= 40) return "Moderately busy";
+            if (value >= 20) return "Light workload";
+            return "Very available and open for collaboration";
         }
 
         function getMoodStatus(value) {
-            if (value === 0) return "Not working - Off duty";
-            if (value >= 80) return "Excellent mood - Highly energetic";
-            if (value >= 60) return "Good mood - Productive state";
-            if (value >= 40) return "Neutral mood - Steady pace";
-            if (value >= 20) return "Low energy - Need focus time";
-            return "Very low energy - Minimal capacity";
+            if (value === 0) return "Not working";
+            if (value >= 80) return "Excellent mood";
+            if (value >= 60) return "Good mood";
+            if (value >= 40) return "Neutral mood";
+            if (value >= 20) return "Low energy";
+            return "Very low energy";
         }
 
         function getEfficiencyStatus(value) {
-            if (value === 0) return "🔴 Not working - Off duty";
-            if (value >= 80) return "🚀 Peak performance - Ideal for complex tasks";
-            if (value >= 60) return "✨ High efficiency - Great for collaboration";
-            if (value >= 40) return "⚡ Moderate efficiency - Standard response time";
-            if (value >= 20) return "🔋 Low efficiency - Delayed responses expected";
-            if (value >= 6) return "🛑 Minimal efficiency - Emergency only";
-            return "🔴 Nearly off duty";
+            if (value === 0) return "Not working";
+            if (value >= 80) return "Peak performance";
+            if (value >= 60) return "High efficiency";
+            if (value >= 40) return "Moderate efficiency - Standard response time";
+            if (value >= 20) return "Low efficiency - Delayed responses expected";
+            if (value >= 6) return "Minimal efficiency - Emergency only";
+            return "Nearly out of office";
         }
 
         function formatDate(dateString) {
