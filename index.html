@@ -321,7 +321,8 @@
             if (value >= 60) return "Good mood - Productive state";
             if (value >= 40) return "Neutral mood - Steady pace";
             if (value >= 20) return "Low energy - Need focus time";
-            return "Very low energy - Minimal capacity";
+            if (value >= 5) return "Very low energy - Minimal capacity";
+            return "Not working";
         }
 
         function getEfficiencyStatus(value) {
@@ -329,7 +330,8 @@
             if (value >= 60) return "High efficiency";
             if (value >= 40) return "Moderate efficiency";
             if (value >= 20) return "Low efficiency";
-            return "🛑 Minimal efficiency - Emergency only";
+            if (value >= 5) return "Minimal efficiency - Emergency only";
+            return "Not working";
         }
 
         function formatDate(dateString) {
