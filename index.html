@@ -241,13 +241,8 @@
         }
 
         function createGaugeHTML(busyValue, moodValue, lastUpdate) {
-            // Calculate efficiency score - if both are 0 (not working), efficiency is 0
-            let efficiency;
-            if (busyValue === 0 && moodValue === 0) {
-                efficiency = 0;
-            } else {
-                efficiency = Math.round((100 - busyValue + moodValue) / 2);
-            }
+            // Calculate efficiency score (inverse of busy + mood)
+            const efficiency = Math.round((100 - busyValue + moodValue) / 2);
             
             // Determine status descriptions
             const busyStatus = getBusyStatus(busyValue);
@@ -332,7 +327,7 @@
         }
 
         function getEfficiencyStatus(value) {
-            if (value === 0) return "🔴 Not working - Off duty";
+            if (value <= 5) return "🔴 Not working - Off duty";
             if (value >= 80) return "🚀 Peak performance - Ideal for complex tasks";
             if (value >= 60) return "✨ High efficiency - Great for collaboration";
             if (value >= 40) return "⚡ Moderate efficiency - Standard response time";
