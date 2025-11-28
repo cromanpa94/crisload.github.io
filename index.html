@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cristian's work efficiency status</title>
@@ -226,124 +225,6 @@
     </div>
 
     <script>
-        // Global variables for chart
-        let historyChart = null;
-        let fullHistoryData = [];
-        let showingFullData = false;
-        
-        async function loadHistoryData() {
-            try {
-                const response = await fetch(`history.csv?t=${Date.now()}`);
-                if (!response.ok) return [];
-                
-                const csvText = await response.text();
-                const lines = csvText.trim().split('\n');
-                if (lines.length < 2) return [];
-                
-                const data = [];
-                for (let i = 1; i < lines.length; i++) { // Skip header
-                    const [timestamp, busy, mood, efficiency] = lines[i].split(',');
-                    data.push({
-                        timestamp: timestamp,
-                        busy: parseInt(busy),
-                        mood: parseInt(mood),
-                        efficiency: parseInt(efficiency)
-                    });
-                }
-                return data;
-            } catch (error) {
-                console.log('No history file found or error loading history');
-                return [];
-            }
-        }
-        
-        function updateChart(data) {
-            const ctx = document.getElementById('historyChart').getContext('2d');
-            
-            // Prepare data for chart
-            const labels = data.map(d => {
-                const date = new Date(d.timestamp);
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            });
-            
-            if (historyChart) {
-                historyChart.destroy();
-            }
-            
-            historyChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Workload',
-                        data: data.map(d => d.busy),
-                        borderColor: '#f44336',
-                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                        tension: 0.2
-                    }, {
-                        label: 'Mood',
-                        data: data.map(d => d.mood),
-                        borderColor: '#2196F3',
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        tension: 0.2
-                    }, {
-                        label: 'Efficiency',
-                        data: data.map(d => d.efficiency),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.2,
-                        borderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function toggleDataRange() {
-            const btn = document.getElementById('toggleDataBtn');
-            showingFullData = !showingFullData;
-            
-            if (showingFullData) {
-                updateChart(fullHistoryData);
-                btn.textContent = 'Show Last 20 Points';
-            } else {
-                const last20 = fullHistoryData.slice(-20);
-                updateChart(last20);
-                btn.textContent = 'Show All Data';
-            }
-        }
-        
-        // Modify the existing loadStatusData function to also load history
-        // Add this at the end of the successful load in loadStatusData():
-        async function loadStatusData() {
-            // ... existing code ...
-            
-            // Add this after successfully loading status data:
-            fullHistoryData = await loadHistoryData();
-            if (fullHistoryData.length > 0) {
-                const displayData = fullHistoryData.slice(-20); // Show last 20 by default
-                updateChart(displayData);
-            }
-        }
         // Configuration
         const STATUS_URL = 'status.md';
         const CACHE_DURATION = 60000; // 1 minute cache for development
@@ -434,16 +315,6 @@
                     <div class="efficiency-score">${efficiency}%</div>
                     <div class="efficiency-label">Overall Efficiency</div>
                     <div style="color: #666; font-size: 1em;">${efficiencyStatus}</div>
-                </div>
-
-                <div class="chart-container" style="margin-top: 30px; padding: 20px; background: rgba(255, 255, 255, 0.9); border-radius: 15px;">
-                    <h3 style="text-align: center; color: #555; margin-bottom: 15px;">Historical Trends</h3>
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <button id="toggleDataBtn" onclick="toggleDataRange()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                            Show All Data
-                        </button>
-                    </div>
-                    <canvas id="historyChart" style="max-height: 400px;"></canvas>
                 </div>
 
                 <div class="last-updated">
